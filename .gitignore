@@ -1,3 +1,9 @@
 .DS_Store
 .idea
-
+.vs
+.cmake
+CMakeFiles/
+cmake-build-debug/
+Makefile
+cmake_install.cmake
+lib/
