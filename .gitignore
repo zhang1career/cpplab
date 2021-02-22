@@ -1,6 +1,7 @@
 .DS_Store
 .idea
 lib/
+bin/
 CMakeFiles/
 cmake-build-debug/
 Makefile
