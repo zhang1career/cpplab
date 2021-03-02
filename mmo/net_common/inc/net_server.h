@@ -2,12 +2,19 @@
 // Created by 张荣晋 on 2021/2/20.
 //
 
-#include "net_server.h"
+#ifndef NET_COMMON_NET_SERVER_H
+#define NET_COMMON_NET_SERVER_H
 
-namespace olc {
+#include "net_common.h"
+#include "net_connection.h"
+#include "net_message.h"
+#include "net_tsqueue.h"
+
+namespace cpplab {
     namespace net {
+
         template<typename T>
-        class ServerInterface {
+        class ServerInterface : public BaseInterface<T>, public std::enable_shared_from_this<ServerInterface<T>> {
         public:
             ServerInterface(uint16_t port) : m_asioAcceptor(m_asioContext,
                                                             asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port)) {}
@@ -42,12 +49,13 @@ namespace olc {
                         [this](std::error_code ec, asio::ip::tcp::socket socket) {
                             if (!ec) {
                                 std::cout << "[SERVER] New Connection: " << socket.remote_endpoint() << "\n";
-                                std::shared_ptr <Connection<T>> newConn =
-                                        std::make_shared < Connection < T >> (
-                                                Connection<T>::owner::server,
-                                                        m_asioContext,
-                                                        std::move(socket),
-                                                        m_qMessagesIn);
+                                std::shared_ptr<Connection<T>> newConn =
+                                        std::make_shared<Connection<T>>(
+                                                Connection<T>::Owner::Server,
+                                                this->shared_from_this(),
+                                                m_asioContext,
+                                                std::move(socket),
+                                                m_qMessagesIn);
                                 if (onClientConnect(newConn)) {
                                     m_deqConnections.push_back(std::move(newConn));
                                     m_deqConnections.back()->connectToClient(m_nIdCounter++);
@@ -63,7 +71,7 @@ namespace olc {
                 );
             }
 
-            void messageClient(std::shared_ptr <Connection<T>> client, const Message <T> &msg) {
+            void messageClient(std::shared_ptr<Connection<T>> client, const Message<T> &msg) {
                 if (client && client->isConnected()) {
                     client->send(msg);
                 } else {
@@ -75,9 +83,9 @@ namespace olc {
                 }
             }
 
-            void messageAllClients(const Message <T> &msg, std::shared_ptr <Connection<T>> pIgnoreClient = nullptr) {
+            void messageAllClients(const Message<T> &msg, std::shared_ptr<Connection<T>> pIgnoreClient = nullptr) {
                 bool bInvalidClientExists = false;
-                for (auto &client : m_deqConnections) {
+                for (auto& client : m_deqConnections) {
                     if (client && client->isConnected()) {
                         if (client != pIgnoreClient) {
                             client->send(msg);
@@ -108,32 +116,23 @@ namespace olc {
                 }
             }
 
+        public:
+            virtual void onClientValidated(std::shared_ptr<Connection<T>> client) {}
         protected:
-            virtual bool onClientConnect(std::shared_ptr <Connection<T>> client) {
-                return false;
-            }
-
-            virtual void onClientDisconnect(std::shared_ptr <Connection<T>> client) {
-
-            }
-
-            virtual void onMessage(std::shared_ptr <Connection<T>> client, Message <T> &msg) {
-
-            }
+            virtual bool onClientConnect(std::shared_ptr<Connection<T>> client) {return false;}
+            virtual void onClientDisconnect(std::shared_ptr<Connection<T>> client) {}
+            virtual void onMessage(std::shared_ptr<Connection<T>> client, Message<T> &msg) {}
 
         protected:
-            // thread safe queue for incoming message packets
-            Tsqueue <OwnedMessage<T>> m_qMessagesIn;
-            // container for active validated connection
-            std::deque <std::shared_ptr<Connection < T>>>
-            m_deqConnections;
-            // order of declaration is important - it is also the order of initialisation
+            Tsqueue<OwnedMessage<T>> m_qMessagesIn;
+            std::deque<std::shared_ptr<Connection<T>>> m_deqConnections;
             asio::io_context m_asioContext;
             std::thread m_thrContext;
-            // these things need an asio context
             asio::ip::tcp::acceptor m_asioAcceptor;
-            // clients will be identified in the "wider system" via an ID
             uint32_t m_nIdCounter = 10000;
         };
+
     }
 }
+
+#endif //NET_COMMON_NET_SERVER_H

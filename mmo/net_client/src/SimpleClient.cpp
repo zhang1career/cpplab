@@ -2,7 +2,37 @@
 // Created by 张荣晋 on 2021/2/19.
 //
 
-#include "SimpleClient.h"
+#include <iostream>
+#include <olc_net.h>
+
+enum class CustomMsgTypes : uint32_t {
+    ServerAccept,
+    ServerDeny,
+    ServerPing,
+    MessageAll,
+    ServerMessage,
+};
+
+class CustomClient : public cpplab::net::ClientInterface<CustomMsgTypes> {
+public:
+    void pingServer()
+    {
+        cpplab::net::Message<CustomMsgTypes> msg;
+        msg.header.id = CustomMsgTypes::ServerPing;
+
+        std::chrono::system_clock::time_point timeNow = std::chrono::system_clock::now();
+
+        msg << timeNow;
+        send(msg);
+    }
+
+    void messageAll()
+    {
+        cpplab::net::Message<CustomMsgTypes> msg;
+        msg.header.id = CustomMsgTypes::MessageAll;
+        send(msg);
+    }
+};
 
 int main() {
     CustomClient c;
@@ -14,12 +44,12 @@ int main() {
     bool bQuit = false;
     while (!bQuit)
     {
-        if (getForegroundWindow() == getConsoleWindow())
-        {
-            key[0] = getAsyncKeyState('1') & 0x8000;
-            key[1] = getAsyncKeyState('2') & 0x8000;
-            key[2] = getAsyncKeyState('3') & 0x8000;
-        }
+//        if (getForegroundWindow() == getConsoleWindow())
+//        {
+//            key[0] = getAsyncKeyState('1') & 0x8000;
+//            key[1] = getAsyncKeyState('2') & 0x8000;
+//            key[2] = getAsyncKeyState('3') & 0x8000;
+//        }
 
         if (key[0] && !old_key[0]) {
             c.pingServer();

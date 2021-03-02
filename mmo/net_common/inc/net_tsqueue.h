@@ -2,10 +2,14 @@
 // Created by 张荣晋 on 2021/2/19.
 //
 
-#include "net_tsqueue.h"
+#ifndef NET_COMMON_NET_TSQUEUE_H
+#define NET_COMMON_NET_TSQUEUE_H
 
-namespace olc {
+#include "net_common.h"
+
+namespace cpplab {
     namespace net {
+
         template<typename T>
         class Tsqueue {
         public:
@@ -47,6 +51,14 @@ namespace olc {
                 deqQueue.emplace_front(std::move(item));
             }
 
+            void pushBack(const T &item) {
+                std::scoped_lock lock(muxQueue);
+                deqQueue.emplace_back(std::move(item));
+
+                std::unique_lock<std::mutex> ul(muxBlocking);
+                cvBlocking.notify_one();
+            }
+
             bool empty() {
                 std::scoped_lock lock(muxQueue);
                 return deqQueue.empty();
@@ -64,16 +76,19 @@ namespace olc {
 
             void wait() {
                 while (empty()) {
-                    std::unique_lock <std::mutex> ul(muxBlocking);
+                    std::unique_lock<std::mutex> ul(muxBlocking);
                     cvBlocking.wait(ul);
                 }
             }
 
         protected:
             std::mutex muxQueue;
-            std::deque <T> deqQueue;
+            std::deque<T> deqQueue;
             std::condition_variable cvBlocking;
             std::mutex muxBlocking;
         };
+
     }
 }
+
+#endif //NET_COMMON_NET_TSQUEUE_H
