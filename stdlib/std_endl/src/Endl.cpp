@@ -25,6 +25,7 @@ int main() {
     for (int i = 0; i <1000000; i++) {
         writeln(outfile, "Hello World");
     }
+    outfile << std::flush;
     auto now = std::chrono::steady_clock::now();
     auto diff = now - then;
     std::cout << "writeln: " << std::chrono::duration <double, std::milli> (diff).count() << " ms" << std::endl;
